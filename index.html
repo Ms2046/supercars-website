@@ -1639,17 +1639,11 @@
       let videoLerpTime = 0;
       let videoDuration = 0;
       let videoReady = false;
-      let isSeeking = false;
 
       scrubVideo.addEventListener('loadedmetadata', () => {
         videoReady = true;
         videoDuration = scrubVideo.duration;
         scrubVideo.currentTime = 0;
-      });
-
-      // When a seek finishes, check if we need another
-      scrubVideo.addEventListener('seeked', () => {
-        isSeeking = false;
       });
 
       if (!reducedMotion) {
@@ -1658,24 +1652,23 @@
           start: 'top top',
           end: '+=250%',
           pin: true,
-          scrub: 3,
+          scrub: 1.2, // Smoother, responsive follow rate
           onUpdate(self) {
             videoTargetTime = self.progress * videoDuration;
           }
         });
 
-        // Smooth scrub loop — only seek when decoder is free
+        // Smooth scrub loop
         function videoLoop() {
           requestAnimationFrame(videoLoop);
           if (!videoReady || videoDuration === 0) return;
 
-          // Lerp for smooth motion
-          videoLerpTime += (videoTargetTime - videoLerpTime) * 0.05;
+          // Faster lerp for tighter tracking
+          videoLerpTime += (videoTargetTime - videoLerpTime) * 0.15;
           videoLerpTime = Math.max(0, Math.min(videoLerpTime, videoDuration));
 
-          // Only seek if decoder is not busy and the jump is meaningful
-          if (!isSeeking && Math.abs(scrubVideo.currentTime - videoLerpTime) > 0.05) {
-            isSeeking = true;
+          // Directly update time on meaningful frame changes
+          if (Math.abs(scrubVideo.currentTime - videoLerpTime) > 0.01) {
             scrubVideo.currentTime = videoLerpTime;
           }
         }
